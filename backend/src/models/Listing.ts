@@ -29,6 +29,13 @@ export interface IListing extends Document {
   expectedAttributes?: any;
   detectedAttributes?: any;
 
+  // Revenue Model & Sustainability
+  buyerPrice: number;
+  amazonFee: number;
+  sustainabilityScore: number;
+  sustainabilityBadge: 'Bronze' | 'Silver' | 'Gold';
+  co2Savings: number;
+
   createdAt: Date;
 }
 
@@ -60,6 +67,13 @@ const ListingSchema: Schema = new Schema({
   productMatchScore: { type: Number, default: 100 },
   expectedAttributes: { type: Schema.Types.Mixed },
   detectedAttributes: { type: Schema.Types.Mixed },
+
+  // Revenue Model & Sustainability
+  buyerPrice: { type: Number, required: true },
+  amazonFee: { type: Number, required: true },
+  sustainabilityScore: { type: Number, default: 85 },
+  sustainabilityBadge: { type: String, enum: ['Bronze', 'Silver', 'Gold'], default: 'Silver' },
+  co2Savings: { type: Number, default: 12 },
 
   createdAt: { type: Date, default: Date.now }
 });

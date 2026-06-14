@@ -100,9 +100,45 @@ const calculateRecommendedPrice = (currentPrice: number, purchaseDate: Date, con
 };
 
 // Active user lookup helper
+let activeEmail = 'seller@amazonresell.com'; // Default active user
+
 const getActiveUser = async (): Promise<any> => {
-  return await User.findOne({ email: 'john@amazon.com' });
+  let user = await User.findOne({ email: activeEmail });
+  if (!user) {
+    user = await User.findOne({});
+  }
+  return user;
 };
+
+// Auth Sign-In / Login API
+router.post('/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Auth Failed: Account not found.' });
+    }
+    if (email === 'seller@amazonresell.com' && password !== 'seller123') {
+      return res.status(401).json({ error: 'Invalid password.' });
+    }
+    if (email === 'buyer@amazonresell.com' && password !== 'buyer123') {
+      return res.status(401).json({ error: 'Invalid password.' });
+    }
+    activeEmail = email;
+    res.json({ success: true, user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/auth/logout', async (req: Request, res: Response) => {
+  try {
+    activeEmail = 'seller@amazonresell.com'; // reset to seller
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // 1. GET /api/user - Get active seller
 router.get('/user', async (req: Request, res: Response) => {
@@ -219,27 +255,94 @@ router.post('/listings/analyze-condition', upload.single('video'), async (req: R
       expectedColor = 'Grey & Black';
     }
 
-    const expectedAttributes = {
+    let expectedAttributes = {
       brand: expectedBrand,
       model: expectedModel,
       category: expectedCategory,
       color: expectedColor
     };
 
+    // Call FastAPI visual check python server on port 8000
+    let fastapiResult: any = null;
+    try {
+      const fs = require('fs');
+      const blob = new Blob([fs.readFileSync(req.file.path)]);
+      const body = new FormData();
+      body.append('video', blob, req.file.originalname);
+      body.append('orderId', orderId);
+      body.append('brand', expectedBrand);
+      body.append('model', expectedModel);
+      body.append('category', expectedCategory);
+      body.append('color', expectedColor);
+      body.append('simulateMismatch', simulateMismatch || 'false');
+      body.append('functionalChecks', req.body.functionalChecks || '{}');
+
+      const fastapiRes = await fetch('http://127.0.0.1:8000/analyze', {
+        method: 'POST',
+        body
+      });
+      if (fastapiRes.ok) {
+        fastapiResult = await fastapiRes.json();
+      }
+    } catch (err) {
+      console.log('[AI Engine] FastAPI Visual check engine offline. Falling back to local visual check simulation.');
+    }
+
     // 2. EXTRACT DETECTED ATTRIBUTES (Simulate AI Video scans)
     let detectedAttributes = { ...expectedAttributes };
     let productMatchScore = 96; // base perfect match score
+    let selectedReport: any = null;
 
-    // Simulate rejection if wrong product uploaded
-    if (simulateMismatch === 'true') {
-      detectedAttributes = {
-        brand: 'Apple',
-        model: 'iPhone 14',
-        category: 'Electronics',
-        color: 'Blue'
+    if (fastapiResult) {
+      productMatchScore = fastapiResult.productMatchScore;
+      expectedAttributes = fastapiResult.expectedAttributes;
+      detectedAttributes = fastapiResult.detectedAttributes;
+      selectedReport = {
+        conditionCategory: fastapiResult.conditionCategory,
+        conditionScore: fastapiResult.conditionScore,
+        confidenceScore: 92,
+        detectedIssues: fastapiResult.detectedIssues
       };
-      // Compute mismatch score (Sony WH-1000XM5 vs iPhone 14)
-      productMatchScore = 12; // Far below 70%
+    } else {
+      // Fallback local visual checks
+      if (simulateMismatch === 'true') {
+        detectedAttributes = {
+          brand: 'Apple',
+          model: 'iPhone 14',
+          category: 'Electronics',
+          color: 'Blue'
+        };
+        productMatchScore = 12; // Far below 70%
+      }
+
+      const reports = [
+        {
+          conditionCategory: 'Excellent' as const,
+          conditionScore: 88,
+          confidenceScore: 92,
+          detectedIssues: ['Minor light scratches on frame', 'No glass cracks', 'Ports clean']
+        },
+        {
+          conditionCategory: 'Like New' as const,
+          conditionScore: 96,
+          confidenceScore: 95,
+          detectedIssues: ['Pristine display condition', 'Zero visible scratches', 'Ports clean']
+        },
+        {
+          conditionCategory: 'Good' as const,
+          conditionScore: 82,
+          confidenceScore: 90,
+          detectedIssues: ['Moderate scuffs on corners', 'Back panel wear', 'No structural cracks']
+        }
+      ];
+
+      const localReport = reports[Math.floor(Math.random() * reports.length)];
+      selectedReport = {
+        conditionCategory: localReport.conditionCategory,
+        conditionScore: localReport.conditionScore,
+        confidenceScore: localReport.confidenceScore,
+        detectedIssues: localReport.detectedIssues
+      };
     }
 
     // STAGE 2.5: VERIFY PRODUCT MATCH (Anti-Fraud check)
@@ -283,39 +386,13 @@ router.post('/listings/analyze-condition', upload.single('video'), async (req: R
       functionalScore = 100;
     }
 
-    // 4. CALCULATE AI EXTERNAL CONDITION
-    const reports = [
-      {
-        conditionCategory: 'Excellent' as const,
-        conditionScore: 88,
-        confidenceScore: 92,
-        detectedIssues: ['Minor light scratches on frame', 'No glass cracks', 'Ports clean']
-      },
-      {
-        conditionCategory: 'Like New' as const,
-        conditionScore: 96,
-        confidenceScore: 95,
-        detectedIssues: ['Pristine display condition', 'Zero visible scratches', 'Ports clean']
-      },
-      {
-        conditionCategory: 'Good' as const,
-        conditionScore: 82,
-        confidenceScore: 90,
-        detectedIssues: ['Moderate scuffs on corners', 'Back panel wear', 'No structural cracks']
-      }
-    ];
-
-    let selectedReport: any = reports[Math.floor(Math.random() * reports.length)];
     if (functionalScore < 100 && expectedCategory !== 'Furniture') {
-      selectedReport = {
-        conditionCategory: 'Fair' as const,
-        conditionScore: Math.round(functionalScore * 0.8),
-        confidenceScore: 88,
-        detectedIssues: ['Failed component checks', 'Moderate physical scuffs', 'Light casing wear']
-      };
+      selectedReport.conditionCategory = 'Fair';
+      selectedReport.conditionScore = Math.round(functionalScore * 0.8);
+      selectedReport.detectedIssues = ['Failed component checks', 'Moderate physical scuffs', 'Light casing wear'];
     }
 
-    // 5. CALCULATE OWNERSHIP CONFIDENCE
+    // 5. CALCULATE AI OWNERSHIP CONFIDENCE
     let ownershipConfidence = 95; // base score if code is in video
     if (expectedCategory !== 'Furniture' && !imei && !serialNumber) {
       ownershipConfidence = 75; // low confidence if hardware keys omitted
@@ -422,10 +499,15 @@ router.post('/listings', upload.array('images', 5), async (req: Request, res: Re
       }
     }
 
+    // Revenue Model: Added 10% fee (Min 500, Max 3000)
+    const priceVal = parseFloat(sellingPrice);
+    const amazonFee = Math.min(3000, Math.max(500, Math.round(priceVal * 0.1)));
+    const buyerPrice = priceVal + amazonFee;
+
     const listing = await Listing.create({
       order: order._id,
       seller: user._id,
-      sellingPrice: parseFloat(sellingPrice),
+      sellingPrice: priceVal,
       description,
       conditionNotes,
       images: imagePaths,
@@ -447,7 +529,14 @@ router.post('/listings', upload.array('images', 5), async (req: Request, res: Re
       trustScore,
       productMatchScore,
       expectedAttributes,
-      detectedAttributes
+      detectedAttributes,
+
+      // Revenue & Sustainability
+      buyerPrice,
+      amazonFee,
+      sustainabilityScore: order.sustainabilityScore || 85,
+      sustainabilityBadge: order.sustainabilityBadge || 'Silver',
+      co2Savings: order.co2Savings || 12
     });
 
     res.status(201).json({
@@ -548,7 +637,14 @@ router.get('/products', async (req: Request, res: Response) => {
         
         // Smart Pricing metadata
         currentAmazonPrice: order.originalPurchasePrice,
-        proximityDetails: proximity
+        proximityDetails: proximity,
+
+        // Sustainability & Revenue parameters
+        buyerPrice: listing.buyerPrice || (listing.sellingPrice + Math.min(3000, Math.max(500, Math.round(listing.sellingPrice * 0.1)))),
+        amazonFee: listing.amazonFee || Math.min(3000, Math.max(500, Math.round(listing.sellingPrice * 0.1))),
+        sustainabilityScore: listing.sustainabilityScore || order.sustainabilityScore || 85,
+        sustainabilityBadge: listing.sustainabilityBadge || order.sustainabilityBadge || 'Silver',
+        co2Savings: listing.co2Savings || order.co2Savings || 12
       };
     });
 
@@ -630,7 +726,14 @@ router.get('/products/:id', async (req: Request, res: Response) => {
           functionalChecks: report.functionalChecks,
           expectedAttributes: report.expectedAttributes,
           detectedAttributes: report.detectedAttributes
-        } : null
+        } : null,
+
+        // Sustainability & Revenue parameters
+        buyerPrice: listing.buyerPrice || (listing.sellingPrice + Math.min(3000, Math.max(500, Math.round(listing.sellingPrice * 0.1)))),
+        amazonFee: listing.amazonFee || Math.min(3000, Math.max(500, Math.round(listing.sellingPrice * 0.1))),
+        sustainabilityScore: listing.sustainabilityScore || order.sustainabilityScore || 85,
+        sustainabilityBadge: listing.sustainabilityBadge || order.sustainabilityBadge || 'Silver',
+        co2Savings: listing.co2Savings || order.co2Savings || 12
       };
     });
 
@@ -665,7 +768,7 @@ router.post('/listings/:id/buy', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Buyer account not found.' });
     }
 
-    const listing = await Listing.findById(listingId).populate('seller');
+    const listing = await Listing.findById(listingId).populate('seller').populate('order');
     if (!listing || listing.status !== 'Active') {
       return res.status(400).json({ error: 'Listing is no longer active.' });
     }
@@ -681,14 +784,183 @@ router.post('/listings/:id/buy', async (req: Request, res: Response) => {
       buyer: buyer._id,
       seller: listing.seller,
       listing: listing._id,
-      amount: listing.sellingPrice,
+      amount: listing.buyerPrice || listing.sellingPrice,
       paymentStatus: 'Completed'
     });
+
+    // Award 5% credit reward to buyer for refurbished shopping
+    const order = listing.order as any;
+    const creditReward = Math.round((listing.buyerPrice || listing.sellingPrice) * 0.05);
+    buyer.currentCredits += creditReward;
+    buyer.lifetimeCredits += creditReward;
+    buyer.refurbishedPurchases += 1;
+    buyer.greenActionsCount += 1;
+    buyer.co2Saved += listing.co2Savings || 12;
+    buyer.rewardHistory.push({
+      activity: `Purchased Refurbished ${order?.productName || 'Item'}`,
+      credits: creditReward,
+      co2Saved: listing.co2Savings || 12,
+      date: new Date()
+    });
+
+    // Check tier upgrade status
+    if (buyer.lifetimeCredits >= 2000) buyer.tier = 'Circular Champion';
+    else if (buyer.lifetimeCredits >= 1000) buyer.tier = 'Carbon Hero';
+    else if (buyer.lifetimeCredits >= 500) buyer.tier = 'Eco Warrior';
+
+    await buyer.save();
 
     res.json({
       success: true,
       message: 'Transaction completed successfully! Item purchased.',
       transaction
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 9. POST /api/orders/:id/return - Initiate smart returns with green credits
+router.post('/orders/:id/return', async (req: Request, res: Response) => {
+  try {
+    const { returnOption } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    const user = await getActiveUser();
+    if (!user) {
+      return res.status(404).json({ error: 'User not logged in.' });
+    }
+
+    let credits = 0;
+    let co2 = 2; // standard pickup baseline savings (kg)
+
+    if (returnOption === 'flexible') {
+      credits = 50;
+      co2 = 5;
+    } else if (returnOption === 'hub') {
+      credits = 100;
+      co2 = 12;
+    }
+
+    order.returnStatus = 'Returned';
+    order.returnOption = returnOption;
+    order.returnCreditsEarned = credits;
+    await order.save();
+
+    // Credit reward wallet
+    user.currentCredits += credits;
+    user.lifetimeCredits += credits;
+    user.co2Saved += co2;
+    user.greenActionsCount += 1;
+    user.rewardHistory.push({
+      activity: `Smart Return (${returnOption}) for ${order.productName}`,
+      credits,
+      co2Saved: co2,
+      date: new Date()
+    });
+
+    // Check tier upgrade status
+    if (user.lifetimeCredits >= 2000) user.tier = 'Circular Champion';
+    else if (user.lifetimeCredits >= 1000) user.tier = 'Carbon Hero';
+    else if (user.lifetimeCredits >= 500) user.tier = 'Eco Warrior';
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Smart Return processed successfully!',
+      order,
+      user
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 10. POST /api/sustainability/redeem - Redeem green credits for vouchers
+router.post('/sustainability/redeem', async (req: Request, res: Response) => {
+  try {
+    const { cost, reward } = req.body;
+    const user = await getActiveUser();
+    if (!user) {
+      return res.status(404).json({ error: 'User not logged in.' });
+    }
+
+    if (user.currentCredits < cost) {
+      return res.status(400).json({ error: 'Insufficient Green Credits balance.' });
+    }
+
+    user.currentCredits -= cost;
+    user.redeemedCredits += cost;
+
+    const couponCode = `AMZ-ECO-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newCoupon = {
+      code: couponCode,
+      reward,
+      cost,
+      date: new Date()
+    };
+    user.couponsRedeemed.push(newCoupon);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Voucher redeemed successfully!',
+      coupon: newCoupon,
+      user
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 11. GET /api/sustainability/admin-stats - Corporate sustainability performance
+router.get('/sustainability/admin-stats', async (req: Request, res: Response) => {
+  try {
+    const allUsers = await User.find({});
+    
+    // Aggregates
+    const totalCo2 = allUsers.reduce((sum, u) => sum + (u.co2Saved || 0), 0);
+    const totalCredits = allUsers.reduce((sum, u) => sum + (u.lifetimeCredits || 0), 0);
+    const activeMembers = allUsers.filter(u => u.lifetimeCredits > 0).length;
+    const participationRate = Math.round((activeMembers / (allUsers.length || 1)) * 100);
+
+    res.json({
+      totalCo2Saved: totalCo2 || 525,
+      totalCreditsIssued: totalCredits || 2350,
+      participationRate: participationRate || 75,
+      returnReductionRate: 14.5
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 12. GET /api/sustainability/seller-stats - Seller circular dashboard stats
+router.get('/sustainability/seller-stats', async (req: Request, res: Response) => {
+  try {
+    const user = await getActiveUser();
+    if (!user) {
+      return res.status(404).json({ error: 'User not logged in.' });
+    }
+
+    // Active + Sold listings
+    const listings = await Listing.find({ seller: user._id }).populate('order');
+    const sold = listings.filter(l => l.status === 'Sold');
+    const active = listings.filter(l => l.status === 'Active');
+
+    const totalEarnings = sold.reduce((sum, l) => sum + l.sellingPrice, 0);
+    const totalCarbonSaved = sold.reduce((sum, l) => sum + (l.co2Savings || 12), 0);
+
+    res.json({
+      totalEarnings,
+      totalCarbonSaved,
+      activeCount: active.length,
+      soldCount: sold.length,
+      listings
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
