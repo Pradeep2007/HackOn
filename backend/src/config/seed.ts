@@ -3,6 +3,7 @@ import Order from '../models/Order';
 import Listing from '../models/Listing';
 import AIReport from '../models/AIReport';
 import TrustScore from '../models/TrustScore';
+import Donation from '../models/Donation';
 
 export const seedDatabase = async (): Promise<void> => {
   try {
@@ -12,6 +13,7 @@ export const seedDatabase = async (): Promise<void> => {
     await Listing.deleteMany({});
     await AIReport.deleteMany({});
     await TrustScore.deleteMany({});
+    await Donation.deleteMany({});
 
     console.log('[Seeder] Cleared database collections.');
 
