@@ -13,6 +13,22 @@ export interface IListing extends Document {
   isSellerVerified: boolean;
   isAiVerified: boolean;
   status: 'Active' | 'Sold' | 'Inactive';
+  
+  // Resell Enhancements
+  imei?: string;
+  serialNumber?: string;
+  verificationCode: string;
+  ownershipConfidence: number;
+  functionalScore?: number;
+  functionalChecks?: any;
+  zipCode: string;
+
+  // New Trust Model enhancements
+  trustScore: number;
+  productMatchScore: number;
+  expectedAttributes?: any;
+  detectedAttributes?: any;
+
   createdAt: Date;
 }
 
@@ -29,6 +45,22 @@ const ListingSchema: Schema = new Schema({
   isSellerVerified: { type: Boolean, default: true },
   isAiVerified: { type: Boolean, default: false },
   status: { type: String, enum: ['Active', 'Sold', 'Inactive'], default: 'Active' },
+  
+  // Verification details
+  imei: { type: String },
+  serialNumber: { type: String },
+  verificationCode: { type: String, required: true },
+  ownershipConfidence: { type: Number, default: 0 },
+  functionalScore: { type: Number },
+  functionalChecks: { type: Schema.Types.Mixed },
+  zipCode: { type: String, required: true, default: '110001' },
+
+  // Trust Model scores
+  trustScore: { type: Number, default: 90 },
+  productMatchScore: { type: Number, default: 100 },
+  expectedAttributes: { type: Schema.Types.Mixed },
+  detectedAttributes: { type: Schema.Types.Mixed },
+
   createdAt: { type: Date, default: Date.now }
 });
 

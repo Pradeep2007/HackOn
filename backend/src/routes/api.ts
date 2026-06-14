@@ -6,79 +6,119 @@ import Listing from '../models/Listing';
 import AIReport from '../models/AIReport';
 import TrustScore from '../models/TrustScore';
 import Transaction from '../models/Transaction';
+import { fetchAmazonProductData } from '../services/rapidapi';
 import mongoose from 'mongoose';
 
 const router: Router = express.Router();
 
-// Mock catalog of new products
-const NEW_PRODUCTS = [
-  {
-    id: 'new-iphone-14',
-    productName: 'iPhone 14 (128 GB) - Blue',
-    brand: 'Apple',
-    category: 'Electronics',
-    price: 69999,
-    productImage: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=300&q=80',
-    isUsed: false,
-    rating: 4.6,
-    reviewsCount: 3841,
-    isPrime: true,
-    isFulfilled: true,
-    shipping: 'FREE delivery tomorrow'
-  },
-  {
-    id: 'new-macbook-air-m2',
-    productName: 'MacBook Air M2 (8GB RAM, 256GB SSD) - Space Grey',
-    brand: 'Apple',
-    category: 'Electronics',
-    price: 99999,
-    productImage: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=300&q=80',
-    isUsed: false,
-    rating: 4.8,
-    reviewsCount: 1982,
-    isPrime: true,
-    isFulfilled: true,
-    shipping: 'FREE delivery Wednesday'
-  },
-  {
-    id: 'new-sony-headphones',
-    productName: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones - Black',
-    brand: 'Sony',
-    category: 'Electronics',
-    price: 29999,
-    productImage: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80',
-    isUsed: false,
-    rating: 4.5,
-    reviewsCount: 2942,
-    isPrime: true,
-    isFulfilled: true,
-    shipping: 'FREE delivery Friday'
-  }
-];
+// Mock/Fetched catalog mapping helper
+const getCatalogProduct = async (productId: string) => {
+  return await fetchAmazonProductData(productId);
+};
 
-// Helper to get active mock user "John Doe"
+// Unique verification code helper
+const getVerificationCode = (orderId: string): string => {
+  const digits = orderId.replace(/[^0-9]/g, '');
+  return `AMZ-${digits.substring(digits.length - 4)}`;
+};
+
+// Proximity local delivery calculator
+const calculateProximity = (sellerZip: string, buyerZip: string = '110001') => {
+  const sz = sellerZip.trim();
+  const bz = buyerZip.trim();
+  if (sz === bz) {
+    return {
+      distanceKm: 1.2,
+      phase: 'Stage 1 (0-25 km)',
+      audience: 'Local Neighborhood',
+      deliveryTime: '2-4 hours',
+      saleTime: '2-3 days'
+    };
+  }
+  if (sz.substring(0, 3) === bz.substring(0, 3)) {
+    return {
+      distanceKm: 8.5,
+      phase: 'Stage 1 (0-25 km)',
+      audience: 'Local District',
+      deliveryTime: '4-6 hours',
+      saleTime: '2-5 days'
+    };
+  }
+  if (sz.substring(0, 2) === bz.substring(0, 2)) {
+    return {
+      distanceKm: 65,
+      phase: 'Stage 2 (Nearby Cities)',
+      audience: 'Metropolitan Area',
+      deliveryTime: '1 day',
+      saleTime: '3-6 days'
+    };
+  }
+  return {
+    distanceKm: 1150,
+    phase: 'Stage 3 (Nationwide)',
+    audience: 'Nationwide Buyers',
+    deliveryTime: '2-3 days',
+    saleTime: '5-9 days'
+  };
+};
+
+// Smart Pricing calculation formula
+const calculateRecommendedPrice = (currentPrice: number, purchaseDate: Date, condition: string) => {
+  const today = new Date();
+  const purchase = new Date(purchaseDate);
+  const ageInMonths = (today.getFullYear() - purchase.getFullYear()) * 12 + today.getMonth() - purchase.getMonth();
+
+  // Age Factors
+  let ageFactor = 0.35;
+  if (ageInMonths <= 3) ageFactor = 0.90;
+  else if (ageInMonths <= 6) ageFactor = 0.85;
+  else if (ageInMonths <= 12) ageFactor = 0.75;
+  else if (ageInMonths <= 24) ageFactor = 0.65;
+  else if (ageInMonths <= 36) ageFactor = 0.50;
+
+  // Condition Factors
+  let conditionFactor = 0.40;
+  if (condition === 'Like New') conditionFactor = 0.95;
+  else if (condition === 'Excellent') conditionFactor = 0.85;
+  else if (condition === 'Good') conditionFactor = 0.75;
+  else if (condition === 'Fair') conditionFactor = 0.60;
+  else if (condition === 'Poor') conditionFactor = 0.40;
+
+  const recommendedPrice = Math.round(currentPrice * ageFactor * conditionFactor);
+  const recommendedRange = [
+    Math.round(recommendedPrice * 0.9),
+    Math.round(recommendedPrice * 1.1)
+  ];
+
+  return {
+    ageInMonths,
+    ageFactor,
+    conditionFactor,
+    recommendedPrice,
+    recommendedRange
+  };
+};
+
+// Active user lookup helper
 const getActiveUser = async (): Promise<any> => {
   return await User.findOne({ email: 'john@amazon.com' });
 };
 
-// 1. GET /api/user - Get current active user (John Doe)
+// 1. GET /api/user - Get active seller
 router.get('/user', async (req: Request, res: Response) => {
   try {
     const user = await getActiveUser();
     if (!user) {
-      return res.status(404).json({ error: 'User not found. Run database seed.' });
+      return res.status(404).json({ error: 'User not found.' });
     }
     const scoreDoc = await TrustScore.findOne({ user: user._id });
-    res.json({
-      user,
-      trustScoreDetails: scoreDoc || null
-    });
+    res.json({ user, trustScoreDetails: scoreDoc || null });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 2. GET /api/orders - Get user's order history
+// 2. GET /api/orders - Get order history
 router.get('/orders', async (req: Request, res: Response) => {
   try {
     const user = await getActiveUser();
@@ -87,38 +127,67 @@ router.get('/orders', async (req: Request, res: Response) => {
     }
     const orders = await Order.find({ user: user._id });
     
-    // For each order, check if it's already listed
-    const ordersWithListingStatus = await Promise.all(
+    const ordersWithDetails = await Promise.all(
       orders.map(async (order) => {
         const listing = await Listing.findOne({ order: order._id });
+        const verificationCode = getVerificationCode(order.orderId);
+        
+        // Fetch price using RapidAPI Amazon service
+        let currentAmazonPrice = order.originalPurchasePrice;
+        const apiData = await getCatalogProduct(order.productName);
+        if (apiData) currentAmazonPrice = apiData.price;
+
         return {
           ...order.toObject(),
           isAlreadyListed: !!listing,
-          listingId: listing ? listing._id : null
+          listingId: listing ? listing._id : null,
+          verificationCode,
+          currentAmazonPrice
         };
       })
     );
 
-    res.json(ordersWithListingStatus);
+    res.json(ordersWithDetails);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 3. GET /api/orders/:id - Get details of a single order
+// 3. GET /api/orders/:id - Single order details
 router.get('/orders/:id', async (req: Request, res: Response) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ error: 'Order not found.' });
     }
-    res.json(order);
+
+    const verificationCode = getVerificationCode(order.orderId);
+
+    // Fetch from RapidAPI service
+    let currentAmazonPrice = order.originalPurchasePrice;
+    const apiData = await getCatalogProduct(order.productName);
+    if (apiData) currentAmazonPrice = apiData.price;
+
+    const pricingOptions = {
+      'Like New': calculateRecommendedPrice(currentAmazonPrice, order.purchaseDate, 'Like New'),
+      'Excellent': calculateRecommendedPrice(currentAmazonPrice, order.purchaseDate, 'Excellent'),
+      'Good': calculateRecommendedPrice(currentAmazonPrice, order.purchaseDate, 'Good'),
+      'Fair': calculateRecommendedPrice(currentAmazonPrice, order.purchaseDate, 'Fair'),
+      'Poor': calculateRecommendedPrice(currentAmazonPrice, order.purchaseDate, 'Poor')
+    };
+
+    res.json({
+      order,
+      verificationCode,
+      currentAmazonPrice,
+      smartPricingOptions: pricingOptions
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 4. POST /api/listings/analyze-condition - Simulate AI Condition Analysis
+// 4. POST /api/listings/analyze-condition - AI Video scan with expected/detected product match verification
 router.post('/listings/analyze-condition', upload.single('video'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
@@ -126,42 +195,157 @@ router.post('/listings/analyze-condition', upload.single('video'), async (req: R
     }
 
     const videoPath = `/uploads/${req.file.filename}`;
-    
-    // Simulate AI analysis details based on simple heuristics or clean randomization
+    const { orderId, imei, serialNumber, simulateMismatch } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(400).json({ error: 'Order not found.' });
+    }
+
+    // 1. EXTRACT EXPECTED ATTRIBUTES FROM ORDER
+    const expectedBrand = order.brand;
+    const expectedCategory = order.category;
+    let expectedModel = 'iPhone 14';
+    let expectedColor = 'Blue';
+
+    if (order.productName.toLowerCase().includes('macbook')) {
+      expectedModel = 'MacBook Air M2';
+      expectedColor = 'Space Grey';
+    } else if (order.productName.toLowerCase().includes('sony')) {
+      expectedModel = 'WH-1000XM5';
+      expectedColor = 'Black';
+    } else if (order.productName.toLowerCase().includes('chair')) {
+      expectedModel = 'Ergonomic Chair';
+      expectedColor = 'Grey & Black';
+    }
+
+    const expectedAttributes = {
+      brand: expectedBrand,
+      model: expectedModel,
+      category: expectedCategory,
+      color: expectedColor
+    };
+
+    // 2. EXTRACT DETECTED ATTRIBUTES (Simulate AI Video scans)
+    let detectedAttributes = { ...expectedAttributes };
+    let productMatchScore = 96; // base perfect match score
+
+    // Simulate rejection if wrong product uploaded
+    if (simulateMismatch === 'true') {
+      detectedAttributes = {
+        brand: 'Apple',
+        model: 'iPhone 14',
+        category: 'Electronics',
+        color: 'Blue'
+      };
+      // Compute mismatch score (Sony WH-1000XM5 vs iPhone 14)
+      productMatchScore = 12; // Far below 70%
+    }
+
+    // STAGE 2.5: VERIFY PRODUCT MATCH (Anti-Fraud check)
+    if (productMatchScore < 70) {
+      return res.status(400).json({
+        error: 'Verification Failed: Uploaded product does not match purchased product.',
+        reason: `Expected brand: ${expectedBrand} and model: ${expectedModel}. Detected brand: ${detectedAttributes.brand} and model: ${detectedAttributes.model} in video.`,
+        productMatchScore,
+        expectedAttributes,
+        detectedAttributes
+      });
+    }
+
+    // 3. PARSE FUNCTIONAL CHECKS
+    let functionalChecks: any = {};
+    let functionalScore = 100;
+
+    if (expectedCategory !== 'Furniture') {
+      functionalChecks = {
+        powersOn: true,
+        chargingWorks: true,
+        cameraWorks: true,
+        speakerWorks: true,
+        wifiWorks: true,
+        touchWorks: true
+      };
+
+      if (req.body.functionalChecks) {
+        try {
+          functionalChecks = JSON.parse(req.body.functionalChecks);
+          const keys = Object.keys(functionalChecks);
+          const passed = keys.filter(k => functionalChecks[k] === true).length;
+          functionalScore = Math.round((passed / keys.length) * 100);
+        } catch (e) {
+          // fallback 100
+        }
+      }
+    } else {
+      // Furniture has no checklists
+      functionalChecks = null;
+      functionalScore = 100;
+    }
+
+    // 4. CALCULATE AI EXTERNAL CONDITION
     const reports = [
       {
         conditionCategory: 'Excellent' as const,
         conditionScore: 88,
         confidenceScore: 92,
-        detectedIssues: ['Minor light scratches on chassis', 'No screen cracks', 'Ports clean and operational', 'Battery health 92%']
+        detectedIssues: ['Minor light scratches on frame', 'No glass cracks', 'Ports clean']
       },
       {
         conditionCategory: 'Like New' as const,
         conditionScore: 96,
         confidenceScore: 95,
-        detectedIssues: ['Pristine display condition', 'Zero visible scratches', 'Ports clean', 'Battery health 99%']
+        detectedIssues: ['Pristine display condition', 'Zero visible scratches', 'Ports clean']
       },
       {
         conditionCategory: 'Good' as const,
         conditionScore: 82,
         confidenceScore: 90,
-        detectedIssues: ['Moderate scuffs on back panel', 'Corner wear visible', 'Screen intact', 'Fully functional keys']
-      },
-      {
-        conditionCategory: 'Fair' as const,
-        conditionScore: 68,
-        confidenceScore: 88,
-        detectedIssues: ['Heavy scratches on screen', 'Scuff marks on frame', 'Battery health 81%']
+        detectedIssues: ['Moderate scuffs on corners', 'Back panel wear', 'No structural cracks']
       }
     ];
 
-    // Pick a random report configuration (mostly Excellent or Like New for our demo products)
-    const reportIndex = Math.floor(Math.random() * 2); // Picks Excellent or Like New
-    const selectedReport = reports[reportIndex];
+    let selectedReport: any = reports[Math.floor(Math.random() * reports.length)];
+    if (functionalScore < 100 && expectedCategory !== 'Furniture') {
+      selectedReport = {
+        conditionCategory: 'Fair' as const,
+        conditionScore: Math.round(functionalScore * 0.8),
+        confidenceScore: 88,
+        detectedIssues: ['Failed component checks', 'Moderate physical scuffs', 'Light casing wear']
+      };
+    }
+
+    // 5. CALCULATE OWNERSHIP CONFIDENCE
+    let ownershipConfidence = 95; // base score if code is in video
+    if (expectedCategory !== 'Furniture' && !imei && !serialNumber) {
+      ownershipConfidence = 75; // low confidence if hardware keys omitted
+    }
+
+    // 6. COMPREHENSIVE TRUST MODEL CALCULATION
+    const purchaseVerificationScore = 100; // verified purchase ledger
+    const trustScore = Math.round(
+      (purchaseVerificationScore * 0.3) +
+      (ownershipConfidence * 0.2) +
+      (productMatchScore * 0.2) +
+      (selectedReport.conditionScore * 0.15) +
+      (functionalScore * 0.15)
+    );
 
     const report = await AIReport.create({
-      ...selectedReport,
-      videoPath
+      conditionCategory: selectedReport.conditionCategory,
+      conditionScore: selectedReport.conditionScore,
+      confidenceScore: selectedReport.confidenceScore,
+      detectedIssues: selectedReport.detectedIssues,
+      videoPath,
+      
+      // Scores
+      ownershipConfidence,
+      functionalScore,
+      functionalChecks,
+      trustScore,
+      productMatchScore,
+      expectedAttributes,
+      detectedAttributes
     });
 
     res.json(report);
@@ -171,10 +355,21 @@ router.post('/listings/analyze-condition', upload.single('video'), async (req: R
   }
 });
 
-// 5. POST /api/listings - Publish a used listing (with verification checks)
+// 5. POST /api/listings - Publish listing (with verification validations)
 router.post('/listings', upload.array('images', 5), async (req: Request, res: Response) => {
   try {
-    const { orderId, sellingPrice, description, conditionNotes, aiReportId } = req.body;
+    const { 
+      orderId, 
+      sellingPrice, 
+      description, 
+      conditionNotes, 
+      aiReportId,
+      imei,
+      serialNumber,
+      verificationCode,
+      zipCode
+    } = req.body;
+    
     const files = req.files as Express.Multer.File[];
     
     const user = await getActiveUser();
@@ -182,39 +377,48 @@ router.post('/listings', upload.array('images', 5), async (req: Request, res: Re
       return res.status(404).json({ error: 'Seller account not found.' });
     }
 
-    // Retrieve order to run Mongoose-level verifications
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(400).json({ error: 'Invalid Order: Product was not purchased on Amazon.' });
+      return res.status(400).json({ error: 'Order not found.' });
     }
 
-    // Verification 1: Order belongs to seller
+    // verifications
     if (order.user.toString() !== user._id.toString()) {
-      return res.status(403).json({ error: 'Permission Denied: Order does not belong to you.' });
+      return res.status(403).json({ error: 'Permission Denied.' });
     }
-
-    // Verification 2: Order was delivered
     if (order.deliveryStatus !== 'Delivered') {
-      return res.status(400).json({ error: 'Verification Failed: Product has not been delivered yet.' });
+      return res.status(400).json({ error: 'Order not delivered.' });
     }
-
-    // Verification 3: Product is not already listed
     const existingListing = await Listing.findOne({ order: order._id });
     if (existingListing) {
-      return res.status(400).json({ error: 'Verification Failed: Product is already listed for resale.' });
+      return res.status(400).json({ error: 'Listing already active.' });
     }
 
-    // Upload image paths
     const imagePaths = files && files.length > 0 
       ? files.map(file => `/uploads/${file.filename}`) 
-      : [order.productImage]; // Fallback to original purchase image if none uploaded
+      : [order.productImage];
 
-    // Verify AI Report is valid
+    // Read AI report metrics
     let isAiVerified = false;
+    let ownershipConfidence = 80;
+    let functionalScore = 100;
+    let functionalChecks = null;
+    let trustScore = 90;
+    let productMatchScore = 100;
+    let expectedAttributes = null;
+    let detectedAttributes = null;
+
     if (aiReportId && mongoose.Types.ObjectId.isValid(aiReportId)) {
       const report = await AIReport.findById(aiReportId);
       if (report) {
         isAiVerified = true;
+        ownershipConfidence = report.ownershipConfidence;
+        functionalScore = report.functionalScore || 100;
+        functionalChecks = report.functionalChecks;
+        trustScore = report.trustScore;
+        productMatchScore = report.productMatchScore;
+        expectedAttributes = report.expectedAttributes;
+        detectedAttributes = report.detectedAttributes;
       }
     }
 
@@ -229,7 +433,21 @@ router.post('/listings', upload.array('images', 5), async (req: Request, res: Re
       isPurchasedOnAmazon: true,
       isSellerVerified: true,
       isAiVerified,
-      status: 'Active'
+      status: 'Active',
+      
+      imei,
+      serialNumber,
+      verificationCode,
+      zipCode: zipCode || '110001',
+
+      // Trust scores
+      ownershipConfidence,
+      functionalScore,
+      functionalChecks,
+      trustScore,
+      productMatchScore,
+      expectedAttributes,
+      detectedAttributes
     });
 
     res.status(201).json({
@@ -248,23 +466,48 @@ router.get('/products', async (req: Request, res: Response) => {
   try {
     const query = (req.query.q as string || '').toLowerCase();
     
-    // Filter static new products catalog
-    let matchedNew = NEW_PRODUCTS;
+    let buyerZip = req.query.zipCode as string;
+    if (!buyerZip) {
+      const activeUser = await getActiveUser();
+      buyerZip = activeUser ? activeUser.defaultZipCode : '110001';
+    }
+
+    // Fetch catalog products dynamically
+    const catalog = await Promise.all(
+      ['new-iphone-14', 'new-macbook-air-m2', 'new-sony-headphones', 'new-office-chair'].map(async (id) => {
+        const prod = await getCatalogProduct(id);
+        return {
+          id,
+          productName: prod.productName,
+          brand: prod.brand,
+          category: prod.category,
+          price: prod.price,
+          productImage: prod.images[0] || '',
+          rating: prod.rating,
+          reviewsCount: prod.reviewsCount,
+          isPrime: true,
+          isFulfilled: true,
+          shipping: 'FREE Delivery by Amazon',
+          isUsed: false
+        };
+      })
+    );
+
+    let matchedNew = catalog;
     if (query) {
-      matchedNew = NEW_PRODUCTS.filter(p => 
+      matchedNew = catalog.filter(p => 
         p.productName.toLowerCase().includes(query) || 
         p.brand.toLowerCase().includes(query) ||
         p.category.toLowerCase().includes(query)
       );
     }
 
-    // Fetch active listings from the database, populated with order and seller info
+    // Fetch active resell listings
     const activeListings = await Listing.find({ status: 'Active' })
       .populate('order')
       .populate('seller')
       .populate('aiReport');
 
-    // Filter used listings based on search query
     const matchedUsed = activeListings.filter(listing => {
       const order = listing.order as any;
       if (!order) return false;
@@ -275,32 +518,41 @@ router.get('/products', async (req: Request, res: Response) => {
       const seller = listing.seller as any;
       const report = listing.aiReport as any;
       
+      // Proximity distance matching
+      const proximity = calculateProximity(listing.zipCode, buyerZip);
+
       return {
         id: listing._id,
         productId: order.productName.toLowerCase().includes('iphone 14') ? 'new-iphone-14' : 
-                   order.productName.toLowerCase().includes('macbook') ? 'new-macbook-air-m2' : 'new-sony-headphones',
+                   order.productName.toLowerCase().includes('macbook') ? 'new-macbook-air-m2' : 
+                   order.productName.toLowerCase().includes('chair') ? 'new-office-chair' : 'new-sony-headphones',
         productName: `${order.productName} (Used - ${report?.conditionCategory || 'Good'})`,
         brand: order.brand,
         category: order.category,
         price: listing.sellingPrice,
         productImage: listing.images[0] || order.productImage,
         isUsed: true,
+        
         condition: report?.conditionCategory || 'Good',
         conditionScore: report?.conditionScore || 85,
-        trustScore: seller?.trustScore || 92,
+        trustScore: listing.trustScore || report?.trustScore || 88,
+        ownershipConfidence: listing.ownershipConfidence || report?.ownershipConfidence || 90,
+        productMatchScore: listing.productMatchScore || report?.productMatchScore || 100,
+        functionalScore: listing.functionalScore || report?.functionalScore || 100,
         isPurchasedOnAmazon: listing.isPurchasedOnAmazon,
         isSellerVerified: listing.isSellerVerified,
         isAiVerified: listing.isAiVerified,
         sellerName: seller?.name || 'Amazon Customer',
         conditionNotes: listing.conditionNotes,
-        description: listing.description
+        description: listing.description,
+        
+        // Smart Pricing metadata
+        currentAmazonPrice: order.originalPurchasePrice,
+        proximityDetails: proximity
       };
     });
 
-    // Merge new and used together in same array
-    const unifiedResults = [...matchedNew, ...matchedUsed];
-    
-    res.json(unifiedResults);
+    res.json([...matchedNew, ...matchedUsed]);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -311,17 +563,23 @@ router.get('/products/:id', async (req: Request, res: Response) => {
   try {
     const productId = req.params.id;
     
-    // Find base product from catalog
-    const baseProduct = NEW_PRODUCTS.find(p => p.id === productId);
+    let buyerZip = req.query.zipCode as string;
+    if (!buyerZip) {
+      const activeUser = await getActiveUser();
+      buyerZip = activeUser ? activeUser.defaultZipCode : '110001';
+    }
+
+    // Fetch base catalog product using RapidAPI Amazon service
+    const baseProduct = await getCatalogProduct(productId);
     if (!baseProduct) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
-    // Find all used listings corresponding to this product type
     let searchName = '';
     if (productId === 'new-iphone-14') searchName = 'iphone 14';
     else if (productId === 'new-macbook-air-m2') searchName = 'macbook';
     else if (productId === 'new-sony-headphones') searchName = 'sony wh';
+    else if (productId === 'new-office-chair') searchName = 'chair';
 
     const activeListings = await Listing.find({ status: 'Active' })
       .populate('order')
@@ -335,7 +593,9 @@ router.get('/products/:id', async (req: Request, res: Response) => {
       const order = listing.order as any;
       const seller = listing.seller as any;
       const report = listing.aiReport as any;
-      
+
+      const proximity = calculateProximity(listing.zipCode, buyerZip);
+
       return {
         listingId: listing._id,
         sellerName: seller?.name || 'Amazon Customer',
@@ -343,7 +603,13 @@ router.get('/products/:id', async (req: Request, res: Response) => {
         price: listing.sellingPrice,
         condition: report?.conditionCategory || 'Good',
         conditionScore: report?.conditionScore || 85,
-        trustScore: seller?.trustScore || 92,
+        
+        // Individual trust model scores output separately
+        trustScore: listing.trustScore || report?.trustScore || 88,
+        ownershipConfidence: listing.ownershipConfidence || report?.ownershipConfidence || 90,
+        productMatchScore: listing.productMatchScore || report?.productMatchScore || 100,
+        functionalScore: listing.functionalScore || report?.functionalScore || 100,
+        
         isPurchasedOnAmazon: listing.isPurchasedOnAmazon,
         isSellerVerified: listing.isSellerVerified,
         isAiVerified: listing.isAiVerified,
@@ -351,17 +617,37 @@ router.get('/products/:id', async (req: Request, res: Response) => {
         description: listing.description,
         video: report?.videoPath || null,
         images: listing.images,
+        zipCode: listing.zipCode,
+        proximityDetails: proximity,
         aiInspectionDetails: report ? {
           condition: report.conditionCategory,
           score: report.conditionScore,
           confidence: report.confidenceScore,
-          detectedIssues: report.detectedIssues
+          detectedIssues: report.detectedIssues,
+          ownershipConfidence: report.ownershipConfidence || 90,
+          functionalScore: report.functionalScore || 100,
+          productMatchScore: report.productMatchScore || 100,
+          functionalChecks: report.functionalChecks,
+          expectedAttributes: report.expectedAttributes,
+          detectedAttributes: report.detectedAttributes
         } : null
       };
     });
 
     res.json({
-      product: baseProduct,
+      product: {
+        id: productId,
+        productName: baseProduct.productName,
+        brand: baseProduct.brand,
+        category: baseProduct.category,
+        price: baseProduct.price,
+        productImage: baseProduct.images[0] || '',
+        rating: baseProduct.rating,
+        reviewsCount: baseProduct.reviewsCount,
+        isPrime: true,
+        isFulfilled: true,
+        shipping: 'FREE Delivery by Amazon'
+      },
       otherBuyingOptions: buyingOptions
     });
   } catch (error: any) {
@@ -373,7 +659,7 @@ router.get('/products/:id', async (req: Request, res: Response) => {
 router.post('/listings/:id/buy', async (req: Request, res: Response) => {
   try {
     const listingId = req.params.id;
-    const buyer = await getActiveUser(); // For the demo, buyer is also the logged-in user
+    const buyer = await getActiveUser();
     
     if (!buyer) {
       return res.status(404).json({ error: 'Buyer account not found.' });
@@ -388,11 +674,9 @@ router.post('/listings/:id/buy', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'You cannot purchase your own resell listing.' });
     }
 
-    // Update listing status
     listing.status = 'Sold';
     await listing.save();
 
-    // Create Transaction
     const transaction = await Transaction.create({
       buyer: buyer._id,
       seller: listing.seller,

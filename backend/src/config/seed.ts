@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import User from '../models/User';
 import Order from '../models/Order';
 import Listing from '../models/Listing';
@@ -22,7 +21,9 @@ export const seedDatabase = async (): Promise<void> => {
       email: 'john@amazon.com',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
       trustScore: 94,
-      ratingsCount: 12
+      ratingsCount: 12,
+      defaultZipCode: '110001',
+      defaultAddress: 'Barakhamba Road, Connaught Place, New Delhi 110001'
     });
 
     // 2. Create another seller for demo purposes (Jane Smith)
@@ -31,7 +32,9 @@ export const seedDatabase = async (): Promise<void> => {
       email: 'jane@amazon.com',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
       trustScore: 92,
-      ratingsCount: 8
+      ratingsCount: 8,
+      defaultZipCode: '110025',
+      defaultAddress: 'Jamia Nagar, Okhla, New Delhi 110025'
     });
 
     console.log('[Seeder] Users seeded successfully.');
@@ -61,7 +64,7 @@ export const seedDatabase = async (): Promise<void> => {
     ]);
 
     // 3. Create Orders for John Doe (so he can resell them)
-    // iPhone 14
+    // Phone
     const orderIPhone = await Order.create({
       user: john._id,
       productName: 'iPhone 14 (128 GB) - Blue',
@@ -74,7 +77,7 @@ export const seedDatabase = async (): Promise<void> => {
       deliveryStatus: 'Delivered'
     });
 
-    // MacBook Air M2
+    // Laptop
     const orderMacBook = await Order.create({
       user: john._id,
       productName: 'MacBook Air M2 (8GB RAM, 256GB SSD) - Space Grey',
@@ -87,7 +90,7 @@ export const seedDatabase = async (): Promise<void> => {
       deliveryStatus: 'Delivered'
     });
 
-    // Sony WH-1000XM5
+    // Headphones
     const orderSony = await Order.create({
       user: john._id,
       productName: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones - Black',
@@ -97,6 +100,19 @@ export const seedDatabase = async (): Promise<void> => {
       originalPurchasePrice: 29999,
       productImage: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80',
       orderId: '403-4921938-2281048',
+      deliveryStatus: 'Delivered'
+    });
+
+    // Furniture (New Category seeded to testDynamic checks)
+    const orderChair = await Order.create({
+      user: john._id,
+      productName: 'Green Soul Ergonomic Office Chair - Grey & Black',
+      brand: 'Green Soul',
+      category: 'Furniture',
+      purchaseDate: new Date('2025-05-12'),
+      originalPurchasePrice: 8999,
+      productImage: 'https://images.unsplash.com/photo-1580481072645-022f9a6dbf27?auto=format&fit=crop&w=300&q=80',
+      orderId: '403-5592811-0192410',
       deliveryStatus: 'Delivered'
     });
 
@@ -134,6 +150,13 @@ export const seedDatabase = async (): Promise<void> => {
       conditionScore: 88,
       confidenceScore: 92,
       detectedIssues: ['Minor scratches on frame', 'No visible glass cracks', 'Light battery wear'],
+      ownershipConfidence: 94,
+      functionalScore: 100,
+      functionalChecks: { powersOn: true, chargingWorks: true, cameraWorks: true, speakerWorks: true, wifiWorks: true, touchWorks: true },
+      trustScore: 92,
+      productMatchScore: 96,
+      expectedAttributes: { brand: 'Apple', model: 'iPhone 14', category: 'Electronics', color: 'Blue' },
+      detectedAttributes: { brand: 'Apple', model: 'iPhone 14', category: 'Electronics', color: 'Blue' }
     });
 
     await Listing.create({
@@ -147,7 +170,16 @@ export const seedDatabase = async (): Promise<void> => {
       isPurchasedOnAmazon: true,
       isSellerVerified: true,
       isAiVerified: true,
-      status: 'Active'
+      status: 'Active',
+      verificationCode: 'AMZ-2341',
+      zipCode: '110025',
+      ownershipConfidence: 94,
+      functionalScore: 100,
+      functionalChecks: { powersOn: true, chargingWorks: true, cameraWorks: true, speakerWorks: true, wifiWorks: true, touchWorks: true },
+      trustScore: 92,
+      productMatchScore: 96,
+      expectedAttributes: { brand: 'Apple', model: 'iPhone 14', category: 'Electronics', color: 'Blue' },
+      detectedAttributes: { brand: 'Apple', model: 'iPhone 14', category: 'Electronics', color: 'Blue' }
     });
 
     // Sony WH-1000XM5
@@ -156,6 +188,13 @@ export const seedDatabase = async (): Promise<void> => {
       conditionScore: 81,
       confidenceScore: 94,
       detectedIssues: ['Headband padding slightly worn', 'No audio distortions', 'Pristine outer casing'],
+      ownershipConfidence: 92,
+      functionalScore: 100,
+      functionalChecks: { audioWorks: true, bluetoothWorks: true, chargingWorks: true },
+      trustScore: 88,
+      productMatchScore: 98,
+      expectedAttributes: { brand: 'Sony', model: 'WH-1000XM5', category: 'Electronics', color: 'Black' },
+      detectedAttributes: { brand: 'Sony', model: 'WH-1000XM5', category: 'Electronics', color: 'Black' }
     });
 
     await Listing.create({
@@ -169,7 +208,16 @@ export const seedDatabase = async (): Promise<void> => {
       isPurchasedOnAmazon: true,
       isSellerVerified: true,
       isAiVerified: true,
-      status: 'Active'
+      status: 'Active',
+      verificationCode: 'AMZ-1048',
+      zipCode: '110001',
+      ownershipConfidence: 92,
+      functionalScore: 100,
+      functionalChecks: { audioWorks: true, bluetoothWorks: true, chargingWorks: true },
+      trustScore: 88,
+      productMatchScore: 98,
+      expectedAttributes: { brand: 'Sony', model: 'WH-1000XM5', category: 'Electronics', color: 'Black' },
+      detectedAttributes: { brand: 'Sony', model: 'WH-1000XM5', category: 'Electronics', color: 'Black' }
     });
 
     console.log('[Seeder] Pre-existing listings seeded successfully.');

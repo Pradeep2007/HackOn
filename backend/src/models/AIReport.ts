@@ -6,6 +6,18 @@ export interface IAIReport extends Document {
   confidenceScore: number;
   detectedIssues: string[];
   videoPath?: string;
+  
+  // AI checks
+  ownershipConfidence: number;
+  functionalScore?: number;
+  functionalChecks?: any;
+
+  // New Trust Model fields
+  trustScore: number;
+  productMatchScore: number;
+  expectedAttributes?: any;
+  detectedAttributes?: any;
+
   createdAt: Date;
 }
 
@@ -19,6 +31,18 @@ const AIReportSchema: Schema = new Schema({
   confidenceScore: { type: Number, required: true },
   detectedIssues: [{ type: String }],
   videoPath: { type: String },
+
+  // Checks
+  ownershipConfidence: { type: Number, default: 0 },
+  functionalScore: { type: Number },
+  functionalChecks: { type: Schema.Types.Mixed },
+
+  // Trust Model scores
+  trustScore: { type: Number, default: 90 },
+  productMatchScore: { type: Number, default: 100 },
+  expectedAttributes: { type: Schema.Types.Mixed },
+  detectedAttributes: { type: Schema.Types.Mixed },
+
   createdAt: { type: Date, default: Date.now }
 });
 
