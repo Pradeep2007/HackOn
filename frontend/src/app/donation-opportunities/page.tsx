@@ -5,6 +5,7 @@ import AmazonHeader from '../../components/AmazonHeader';
 import { HeartHandshake, ShieldCheck, MapPin, Sparkles, ArrowLeft, Leaf, Gift, Truck, Check, Loader2, ArrowRight, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { API_URL } from '@/config';
 
 interface Organization {
   name: string;
@@ -67,7 +68,7 @@ function DonationOpportunitiesContent() {
       try {
         setLoading(true);
         // 1. Fetch AI evaluation results for the product return
-        const evalRes = await fetch(`http://localhost:5000/api/orders/${orderId}/evaluate-return`, {
+        const evalRes = await fetch(`${API_URL}/api/orders/${orderId}/evaluate-return`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ conditionScore: scoreParam ? parseInt(scoreParam) : undefined })
@@ -80,7 +81,7 @@ function DonationOpportunitiesContent() {
         setProduct(evalData);
 
         // 2. Discover nearby organizations using user's location via backend Places query
-        const orgRes = await fetch(`http://localhost:5000/api/sustainability/donation-places?category=${evalData.category}&conditionScore=${evalData.conditionScore}`);
+        const orgRes = await fetch(`${API_URL}/api/sustainability/donation-places?category=${evalData.category}&conditionScore=${evalData.conditionScore}`);
         if (!orgRes.ok) {
           throw new Error('Failed to fetch nearby organizations.');
         }
@@ -108,7 +109,7 @@ function DonationOpportunitiesContent() {
     if (!product || !selectedOrg) return;
     setSubmittingDonation(true);
     try {
-      const res = await fetch('http://localhost:5000/api/donations', {
+      const res = await fetch(`${API_URL}/api/donations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

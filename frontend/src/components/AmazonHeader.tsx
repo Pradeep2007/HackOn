@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ShoppingCart, MapPin, Menu, ChevronDown } from 'lucide-react';
+import { API_URL } from '@/config';
 
 export default function AmazonHeader() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function AmazonHeader() {
     if (q) setSearchQuery(q);
 
     // Fetch user info from backend
-    fetch('http://localhost:5000/api/user')
+    fetch(`${API_URL}/api/user`)
       .then(res => res.json())
       .then(data => {
         if (data.user) {

@@ -13,7 +13,11 @@ export const connectDB = async (): Promise<string> => {
     } else {
       console.log('[Database] MONGODB_URI not found. Spinning up In-Memory MongoDB server (will download MongoDB binary if not cached)...');
       // Spin up an in-memory MongoDB server
-      mongoServer = await MongoMemoryServer.create();
+      mongoServer = await MongoMemoryServer.create({
+        binary: {
+          version: '7.0.12'
+        }
+      });
       mongoUri = mongoServer.getUri();
       
       // Connect Mongoose to it

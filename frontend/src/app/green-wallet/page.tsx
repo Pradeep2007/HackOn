@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import AmazonHeader from '../../components/AmazonHeader';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { API_URL } from '@/config';
 import { 
   ChevronRight, Landmark, CreditCard, Gift, ShieldCheck, Ticket, Award, Zap, 
   Compass, Leaf, Droplet, Trash2, Activity, ArrowRight, HeartHandshake, MapPin, 
@@ -159,7 +160,7 @@ function GreenWalletContent() {
   const fetchData = async () => {
     try {
       // Fetch user profile
-      const userRes = await fetch('http://localhost:5000/api/user');
+      const userRes = await fetch(`${API_URL}/api/user`);
       if (userRes.ok) {
         const userData = await userRes.json();
         if (userData.user) {
@@ -168,21 +169,21 @@ function GreenWalletContent() {
       }
 
       // Fetch user's donations
-      const donRes = await fetch('http://localhost:5000/api/donations');
+      const donRes = await fetch(`${API_URL}/api/donations`);
       if (donRes.ok) {
         const donData = await donRes.json();
         setDonations(donData);
       }
 
       // Fetch circular leaderboard
-      const leadRes = await fetch('http://localhost:5000/api/sustainability/leaderboard');
+      const leadRes = await fetch(`${API_URL}/api/sustainability/leaderboard`);
       if (leadRes.ok) {
         const leadData = await leadRes.json();
         setLeaderboard(leadData);
       }
 
       // Fetch seller stats
-      const sellerRes = await fetch('http://localhost:5000/api/sustainability/seller-stats');
+      const sellerRes = await fetch(`${API_URL}/api/sustainability/seller-stats`);
       if (sellerRes.ok) {
         const sellerData = await sellerRes.json();
         setSellerStats(sellerData);
@@ -223,7 +224,7 @@ function GreenWalletContent() {
   const handleAdvanceStatus = async (donationId: string) => {
     setAdvancingId(donationId);
     try {
-      const res = await fetch(`http://localhost:5000/api/donations/${donationId}/advance-status`, {
+      const res = await fetch(`${API_URL}/api/donations/${donationId}/advance-status`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -249,7 +250,7 @@ function GreenWalletContent() {
     setSuccessCoupon(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/sustainability/redeem', {
+      const response = await fetch(`${API_URL}/api/sustainability/redeem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cost: reward.cost, reward: reward.reward })

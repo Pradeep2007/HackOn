@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ShieldCheck, Info, Check, Award, AlertTriangle, Eye, Video, RefreshCw, X } from 'lucide-react';
+import { API_URL } from '@/config';
 
 interface BuyingOption {
   listingId: string;
@@ -79,7 +80,7 @@ export default function BuyingOptions({ options, onPurchaseSuccess }: BuyingOpti
   const handleBuy = async (listingId: string) => {
     setPurchasingId(listingId);
     try {
-      const response = await fetch(`http://localhost:5000/api/listings/${listingId}/buy`, {
+      const response = await fetch(`${API_URL}/api/listings/${listingId}/buy`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -144,7 +145,7 @@ export default function BuyingOptions({ options, onPurchaseSuccess }: BuyingOpti
               <X className="h-5 w-5" /> Close
             </button>
             <video 
-              src={`http://localhost:5000${activeVideo}`} 
+              src={`${API_URL}${activeVideo}`} 
               controls 
               autoPlay 
               className="w-full rounded h-auto max-h-[70vh]" 
@@ -386,7 +387,7 @@ export default function BuyingOptions({ options, onPurchaseSuccess }: BuyingOpti
                         {option.images.map((imgUrl, i) => (
                           <img 
                             key={i} 
-                            src={imgUrl.startsWith('/uploads/') ? `http://localhost:5000${imgUrl}` : imgUrl} 
+                            src={imgUrl.startsWith('/uploads/') ? `${API_URL}${imgUrl}` : imgUrl} 
                             alt={`listing-${i}`} 
                             className="w-14 h-14 object-cover rounded border border-gray-200 bg-white"
                           />

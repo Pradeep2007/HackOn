@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL } from '@/config';
 import AmazonHeader from '../../components/AmazonHeader';
 import { Star, ShieldCheck, Check, Award, Compass, ThumbsUp, HelpCircle } from 'lucide-react';
 
@@ -62,7 +63,7 @@ function SearchResultsContent() {
     const fetchResults = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:5000/api/products?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`${API_URL}/api/products?q=${encodeURIComponent(query)}`);
         if (res.ok) {
           const data = await res.json();
           setResults(data);
@@ -198,7 +199,7 @@ function SearchResultsContent() {
                     {/* Product Image */}
                     <div className="w-48 h-48 shrink-0 flex items-center justify-center bg-gray-50/50 rounded p-2 border border-gray-100">
                       <img 
-                        src={product.productImage.startsWith('/uploads/') ? `http://localhost:5000${product.productImage}` : product.productImage} 
+                        src={product.productImage.startsWith('/uploads/') ? `${API_URL}${product.productImage}` : product.productImage} 
                         alt={product.productName} 
                         className="max-h-44 max-w-full object-contain mix-blend-multiply"
                       />

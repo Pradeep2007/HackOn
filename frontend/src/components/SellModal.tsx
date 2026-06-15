@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Play, Loader2, Sparkles, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { API_URL } from '@/config';
 
 interface Order {
   _id: string;
@@ -111,7 +112,7 @@ export default function SellModal({ order, onClose, onPublishSuccess }: SellModa
     const fetchOrderDetails = async () => {
       try {
         setLoadingOrderDetails(true);
-        const res = await fetch(`http://localhost:5000/api/orders/${order._id}`);
+        const res = await fetch(`${API_URL}/api/orders/${order._id}`);
         if (res.ok) {
           const data = await res.json();
           setVerificationCode(data.verificationCode);
@@ -120,7 +121,7 @@ export default function SellModal({ order, onClose, onPublishSuccess }: SellModa
         }
 
         // Fetch seller zipcode from profile
-        const userRes = await fetch('http://localhost:5000/api/user');
+        const userRes = await fetch(`${API_URL}/api/user`);
         if (userRes.ok) {
           const userData = await userRes.json();
           if (userData.user?.defaultZipCode) {
@@ -180,7 +181,7 @@ export default function SellModal({ order, onClose, onPublishSuccess }: SellModa
     formData.append('functionalChecks', JSON.stringify(functionalChecks));
 
     try {
-      const response = await fetch('http://localhost:5000/api/listings/analyze-condition', {
+      const response = await fetch(`${API_URL}/api/listings/analyze-condition`, {
         method: 'POST',
         body: formData
       });
@@ -265,7 +266,7 @@ export default function SellModal({ order, onClose, onPublishSuccess }: SellModa
     });
 
     try {
-      const response = await fetch('http://localhost:5000/api/listings', {
+      const response = await fetch(`${API_URL}/api/listings`, {
         method: 'POST',
         body: formData
       });

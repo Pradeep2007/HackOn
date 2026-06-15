@@ -5,6 +5,7 @@ import AmazonHeader from '../../components/AmazonHeader';
 import SellModal from '../../components/SellModal';
 import { Package, CheckCircle2, ChevronRight, ShoppingBag, ShieldCheck, Check, Truck, Leaf, Gift, X, Loader2, Sparkles, HeartHandshake, Trash2, RotateCcw, Sliders, Video, Award } from 'lucide-react';
 import Link from 'next/link';
+import { API_URL } from '@/config';
 
 interface Order {
   _id: string;
@@ -92,7 +93,7 @@ export default function OrdersPage() {
       formData.append('conditionScore', simulatedScore.toString());
       formData.append('simulateMismatch', simulateMismatch ? 'true' : 'false');
 
-      const res = await fetch(`http://localhost:5000/api/orders/${aiEvalOrder._id}/evaluate-return`, {
+      const res = await fetch(`${API_URL}/api/orders/${aiEvalOrder._id}/evaluate-return`, {
         method: 'POST',
         body: formData
       });
@@ -116,7 +117,7 @@ export default function OrdersPage() {
   const handleRecycleConfirm = async () => {
     if (!aiEvalOrder) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${aiEvalOrder._id}/return`, {
+      const res = await fetch(`${API_URL}/api/orders/${aiEvalOrder._id}/return`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ returnOption: 'hub' }) // locker hub recycling dropoff
@@ -136,7 +137,7 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/api/orders');
+      const res = await fetch(`${API_URL}/api/orders`);
       if (!res.ok) {
         throw new Error('Failed to fetch orders from backend. Is the server running?');
       }
@@ -167,7 +168,7 @@ export default function OrdersPage() {
     if (!returnOrder) return;
     setSubmittingReturn(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${returnOrder._id}/return`, {
+      const res = await fetch(`${API_URL}/api/orders/${returnOrder._id}/return`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ returnOption: selectedReturnOption })

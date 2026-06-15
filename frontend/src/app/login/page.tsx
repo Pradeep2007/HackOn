@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { API_URL } from '@/config';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })

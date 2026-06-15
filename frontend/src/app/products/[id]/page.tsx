@@ -5,6 +5,7 @@ import AmazonHeader from '../../../components/AmazonHeader';
 import BuyingOptions from '../../../components/BuyingOptions';
 import { Star, ShieldCheck, MapPin, Truck, RefreshCw, Lock, ChevronDown, Check } from 'lucide-react';
 import Link from 'next/link';
+import { API_URL } from '@/config';
 
 interface ProductDetails {
   id: string;
@@ -101,7 +102,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   useEffect(() => {
     const fetchUserAddress = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/user');
+        const res = await fetch(`${API_URL}/api/user`);
         if (res.ok) {
           const data = await res.json();
           if (data.user) {
@@ -120,7 +121,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const fetchProductData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:5000/api/products/${productId}?zipCode=${buyerZip}`);
+      const res = await fetch(`${API_URL}/api/products/${productId}?zipCode=${buyerZip}`);
       if (!res.ok) {
         throw new Error('Product not found in catalog.');
       }

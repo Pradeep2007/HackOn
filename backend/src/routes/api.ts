@@ -12,6 +12,7 @@ import Donation from '../models/Donation';
 import { discoverNearbyOrganizations } from '../services/googlemaps';
 
 const router: Router = express.Router();
+const AI_ENGINE_URL = process.env.AI_ENGINE_URL || 'http://127.0.0.1:8000';
 
 // Mock/Fetched catalog mapping helper
 const getCatalogProduct = async (productId: string) => {
@@ -279,7 +280,7 @@ router.post('/listings/analyze-condition', upload.single('video'), async (req: R
       body.append('simulateMismatch', simulateMismatch || 'false');
       body.append('functionalChecks', req.body.functionalChecks || '{}');
 
-      const fastapiRes = await fetch('http://127.0.0.1:8000/analyze', {
+      const fastapiRes = await fetch(`${AI_ENGINE_URL}/analyze`, {
         method: 'POST',
         body
       });
@@ -1020,7 +1021,7 @@ router.post('/orders/:id/evaluate-return', upload.single('video'), async (req: R
         body.append('simulateMismatch', simulateMismatch || 'false');
         body.append('functionalChecks', req.body.functionalChecks || '{}');
 
-        const fastapiRes = await fetch('http://127.0.0.1:8000/analyze', {
+        const fastapiRes = await fetch(`${AI_ENGINE_URL}/analyze`, {
           method: 'POST',
           body
         });
