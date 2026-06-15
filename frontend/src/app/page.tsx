@@ -162,6 +162,38 @@ export default function Home() {
 
       </main>
 
+      {/* Hyperlocal Flash Deals Promotion Banner */}
+      <section className="max-w-7xl mx-auto px-4 mt-8 animate-in fade-in zoom-in-95 duration-300">
+        <div className="bg-gradient-to-r from-[#002f6c] via-[#0b3c5d] to-[#002f6c] text-white p-6 rounded-md shadow border border-blue-900 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+          {/* Animated glow circle */}
+          <div className="absolute -right-10 -bottom-10 h-40 w-40 bg-[#febd69] opacity-10 rounded-full blur-2xl" />
+          
+          <div className="space-y-2 relative z-10 max-w-2xl text-center md:text-left">
+            <span className="bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest px-2.5 py-1 rounded w-fit inline-block">
+              ⚡ LIVE HYPERLOCAL RETURNS
+            </span>
+            <h2 className="text-xl md:text-2xl font-extrabold text-white leading-tight">
+              Instant Open-Box Flash Deals — Available Nearby!
+            </h2>
+            <p className="text-xs text-gray-200 leading-relaxed">
+              When customers return high-quality electronics in your city, we intercept them at the local hub. Claim open-box devices at discounts up to <strong>20% Off</strong> with <strong>Same-Day Delivery</strong> before they leave your area.
+            </p>
+          </div>
+
+          <div className="shrink-0 relative z-10 flex flex-col items-center gap-1.5">
+            <Link 
+              href="/flash-deals" 
+              className="bg-[#ffd814] hover:bg-[#f7ca00] text-black font-bold text-xs px-6 py-3 rounded shadow-md border border-[#e2c027] hover:scale-105 active:scale-95 transition-all text-center flex items-center gap-1.5 cursor-pointer"
+            >
+              Explore Local Deals ⚡
+            </Link>
+            <span className="text-[10px] text-gray-300 font-medium tracking-wide">
+              10 deals active within 15 km
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Walkthrough explanation section */}
       <section className="max-w-7xl mx-auto px-4 mt-8 bg-white p-6 rounded-sm shadow border border-gray-200">
         <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2">

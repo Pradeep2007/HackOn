@@ -1,20 +1,53 @@
 # AWS EC2 Deployment Guide: Amazon Resell Program
 
-This guide provides the exact command sequence to launch and manage the backend APIs, python diagnostics, and Next.js frontend on an AWS EC2 instance (Ubuntu 22.04 LTS).
+This guide provides the complete step-by-step process to launch an AWS EC2 instance, connect to it via SSH, and configure all services (Express backend, Python FastAPI engine, and Next.js frontend) with Nginx as a reverse proxy.
 
 ---
 
-## 1. AWS EC2 Instance Security Group Settings
-Before connecting, ensure the following inbound ports are opened in your AWS Security Group:
-* **SSH:** Port `22` (Restrict to your IP)
-* **HTTP:** Port `80` (Open to public `0.0.0.0/0`)
-* **Express API:** Port `5000` (Optional / Proxy through Port 80)
-* **FastAPI Service:** Port `8000` (Optional / Proxy through Port 80)
-* **Next.js Client:** Port `3000` (Optional / Proxy through Port 80)
+## 1. Step-by-Step Instance Launch & Connection
+
+### Step 1.1: Launch the EC2 Instance
+1. Log in to your **[AWS Management Console](https://aws.amazon.com/console/)**.
+2. Search for **EC2** and click **Launch Instance**.
+3. **Configure Settings:**
+   * **Name:** `amazon-resell-server`
+   * **OS Image (AMI):** `Ubuntu Server 22.04 LTS (HVM), SSD Volume Type`
+   * **Instance Type:** `t2.micro` (or `t3.micro` depending on free tier availability in your region)
+   * **Key Pair:** Click **Create new key pair**:
+     * Key pair name: `amazon-resell-key`
+     * Key pair type: `RSA`
+     * Private key file format: `.pem`
+     * Click **Create key pair** to download the file (e.g., `amazon-resell-key.pem`). Save it securely.
+4. **Network Settings (Security Group):**
+   * Check **Allow SSH traffic from** and select **My IP** (or *Anywhere* if you need access from different locations).
+   * Check **Allow HTTP traffic from the internet** (Port 80).
+   * Check **Allow HTTPS traffic from the internet** (Port 443).
+5. Click **Launch Instance**.
+
+### Step 1.2: Set Key Pair Permissions
+Open your terminal (on macOS/Linux) or PowerShell (on Windows) and navigate to the directory where your key is saved.
+
+* **On macOS/Linux:**
+  ```bash
+  chmod 400 amazon-resell-key.pem
+  ```
+* **On Windows (PowerShell):**
+  ```powershell
+  icacls.exe .\amazon-resell-key.pem /inheritance:r /grant:r "$($env:username):(R)"
+  ```
+
+### Step 1.3: Connect via SSH
+Find your EC2 instance's **Public IPv4 Address** or **Public IPv4 DNS** from the EC2 Console. Run:
+```bash
+ssh -i "amazon-resell-key.pem" ubuntu@<your-ec2-public-ip>
+```
+Type `yes` when asked to confirm the connection.
 
 ---
 
 ## 2. Server Installation & Configuration
+
+Once connected to your Ubuntu instance, run the following commands to install Node.js, Python, and the process manager (PM2).
 
 ### Step 2.1: Update System Packages
 ```bash
@@ -46,9 +79,10 @@ sudo npm install -y -g pm2
 ## 3. Clone Repository & Setup Services
 
 ### Step 3.1: Clone the Codebase
+We will place the project in `/var/www/` for production standards.
 ```bash
 cd /var/www
-# Replace with your git repository link
+# Replace with your repository link
 sudo git clone https://github.com/Pradeep2007/HackOn.git amazon-resell
 sudo chown -R $USER:$USER /var/www/amazon-resell
 cd amazon-resell
@@ -79,36 +113,44 @@ cd ../../..
 ```
 
 ### Step 3.4: Configure & Start Next.js Frontend
-```bash
-cd frontend
-npm install
-# Build the production bundle
-npm run build
-# Start Next.js server in the background with PM2
-pm2 start "npm run start" --name "amazon-frontend"
-cd ..
-```
+Before building the frontend, we must tell it where to reach our backend. Since we are using an Nginx reverse proxy on the same server, all requests to `<your-ec2-public-ip>/api/...` will go to the Express server.
+1. Create a `.env.production` file inside the `frontend` folder:
+   ```bash
+   echo "NEXT_PUBLIC_API_URL=http://<your-ec2-public-ip>" > frontend/.env.production
+   ```
+2. Build and start the Next.js production build:
+   ```bash
+   cd frontend
+   npm install
+   # Build the production bundle
+   npm run build
+   # Start Next.js server in the background with PM2
+   pm2 start "npm run start" --name "amazon-frontend"
+   cd ..
+   ```
 
 ---
 
 ## 4. Setup Nginx Reverse Proxy (Access via Port 80)
 
+Nginx handles routing incoming public HTTP requests on port 80 to the correct internal ports (3000 for frontend, 5000 for backend API, 8000 for FastAPI).
+
 ### Step 4.1: Install Nginx
 ```bash
-sudo apt install -y nginx
+sudo apt install -y nginx -y
 ```
 
-### Step 4.2: Configure Nginx Routing rules
+### Step 4.2: Configure Nginx Routing Rules
 Create a new configuration file:
 ```bash
 sudo nano /etc/nginx/sites-available/amazon-resell
 ```
 
-Paste the following configuration:
+Paste the following configuration (replace `<your-ec2-public-ip>` with your EC2 Public IP address):
 ```nginx
 server {
     listen 80;
-    server_name your_domain_or_ec2_public_ip;
+    server_name <your-ec2-public-ip>;
 
     # Frontend Routing
     location / {
@@ -143,6 +185,7 @@ server {
 ```
 
 ### Step 4.3: Enable Configuration & Restart Nginx
+Enable your site config, test the configuration syntax, and restart the service:
 ```bash
 sudo ln -s /etc/nginx/sites-available/amazon-resell /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
@@ -157,9 +200,9 @@ To inspect the status of your running servers, execute:
 ```bash
 pm2 list
 ```
-To ensure they persist across EC2 reboots, run:
+To ensure the processes persist across EC2 reboots, set up startup scripts:
 ```bash
 pm2 startup
-```
 pm2 save
 ```
+Now, navigate to `http://<your-ec2-public-ip>` in your browser to view your live, fully functional application!

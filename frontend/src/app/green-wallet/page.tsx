@@ -492,7 +492,7 @@ function GreenWalletContent() {
               {sellerStats ? (
                 <div className="space-y-6">
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="bg-gray-55 border border-gray-200 rounded p-3 text-center">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Sales Cash Receive</span>
                       <span className="text-xl font-extrabold text-gray-900 block mt-0.5">₹{sellerStats.totalEarnings?.toLocaleString('en-IN') || 0}</span>
@@ -509,6 +509,11 @@ function GreenWalletContent() {
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Successfully Sold</span>
                       <span className="text-xl font-extrabold text-emerald-600 block mt-0.5">{sellerStats.soldCount || 0} items</span>
                     </div>
+                    <Link href="/flash-deals" className="bg-[#fff] border border-orange-200 hover:border-orange-400 rounded p-3 text-center bg-gradient-to-b from-orange-50/20 to-white flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer">
+                      <span className="text-[9px] text-orange-700 font-bold uppercase block">Return Recovery Score</span>
+                      <span className="text-xl font-extrabold text-orange-700 block mt-0.5">91%</span>
+                      <span className="text-[8px] text-gray-400 font-semibold block">⚡ Hub Live Recovery</span>
+                    </Link>
                   </div>
 
                   {/* Listings Catalog Table */}

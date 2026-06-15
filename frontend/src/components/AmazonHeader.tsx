@@ -125,6 +125,7 @@ export default function AmazonHeader() {
           <span className="border border-transparent hover:border-white p-1 rounded-sm cursor-pointer">Today's Deals</span>
           <Link href="/orders" className="border border-transparent hover:border-white p-1 rounded-sm cursor-pointer font-bold text-[#febd69]">Sell This Item</Link>
           <Link href="/green-wallet" className="border border-transparent hover:border-white p-1 rounded-sm cursor-pointer font-bold text-emerald-400 hover:text-white transition-colors">Green Wallet</Link>
+          <Link href="/flash-deals" className="border border-transparent hover:border-white p-1 rounded-sm cursor-pointer font-bold text-orange-400 hover:text-white transition-colors">Flash Deals [LIVE]</Link>
         </div>
         <div className="font-bold text-[#febd69] hidden lg:block">
           ✓ Real Amazon Resale — Guaranteed Authentic

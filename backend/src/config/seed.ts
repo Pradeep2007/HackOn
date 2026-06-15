@@ -4,6 +4,7 @@ import Listing from '../models/Listing';
 import AIReport from '../models/AIReport';
 import TrustScore from '../models/TrustScore';
 import Donation from '../models/Donation';
+import FlashDeal from '../models/FlashDeal';
 
 export const seedDatabase = async (): Promise<void> => {
   try {
@@ -313,6 +314,185 @@ export const seedDatabase = async (): Promise<void> => {
     });
 
     console.log('[Seeder] Pre-existing listings seeded successfully.');
+
+    // 6. Seed Hyperlocal Flash Deals
+    await FlashDeal.deleteMany({});
+    console.log('[Seeder] Cleared flash deals.');
+
+    await FlashDeal.create([
+      {
+        productName: 'iPhone 14 (Open Box)',
+        brand: 'Apple',
+        category: 'Smartphones',
+        productImage: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Open Box',
+        conditionScore: 94,
+        discountPercent: 15,
+        distanceKm: 4,
+        originalPrice: 69999,
+        dealPrice: 59499,
+        durationMinutes: 15,
+        timeLeftSeconds: 840,
+        potentialBuyers: 23,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'AirPods Pro (Open Box)',
+        brand: 'Apple',
+        category: 'Headphones',
+        productImage: 'https://images.unsplash.com/photo-1588449668338-d15178e3a44f?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Open Box',
+        conditionScore: 88,
+        discountPercent: 20,
+        distanceKm: 7,
+        originalPrice: 24900,
+        dealPrice: 19920,
+        durationMinutes: 15,
+        timeLeftSeconds: 660,
+        potentialBuyers: 15,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'Amazon Echo Dot (5th Gen)',
+        brand: 'Amazon',
+        category: 'Echo Devices',
+        productImage: 'https://images.unsplash.com/photo-1543512214-318c7553f230?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 92,
+        discountPercent: 15,
+        distanceKm: 12,
+        originalPrice: 4499,
+        dealPrice: 3824,
+        durationMinutes: 15,
+        timeLeftSeconds: 900,
+        potentialBuyers: 31,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'Kindle Paperwhite (16 GB)',
+        brand: 'Amazon',
+        category: 'Kindle',
+        productImage: 'https://images.unsplash.com/photo-1613243555988-441166d4d6fd?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 96,
+        discountPercent: 10,
+        distanceKm: 5,
+        originalPrice: 14999,
+        dealPrice: 13499,
+        durationMinutes: 15,
+        timeLeftSeconds: 540,
+        potentialBuyers: 8,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'Samsung Galaxy Watch 5',
+        brand: 'Samsung',
+        category: 'Smartwatches',
+        productImage: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 85,
+        discountPercent: 18,
+        distanceKm: 8,
+        originalPrice: 29999,
+        dealPrice: 24599,
+        durationMinutes: 15,
+        timeLeftSeconds: 780,
+        potentialBuyers: 18,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'iPad Air (10.9-inch)',
+        brand: 'Apple',
+        category: 'Tablets',
+        productImage: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Open Box',
+        conditionScore: 91,
+        discountPercent: 15,
+        distanceKm: 3,
+        originalPrice: 59900,
+        dealPrice: 50915,
+        durationMinutes: 15,
+        timeLeftSeconds: 600,
+        potentialBuyers: 12,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'HP Pavilion Laptop',
+        brand: 'HP',
+        category: 'Laptops',
+        productImage: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 89,
+        discountPercent: 15,
+        distanceKm: 9,
+        originalPrice: 62000,
+        dealPrice: 52700,
+        durationMinutes: 15,
+        timeLeftSeconds: 720,
+        potentialBuyers: 14,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'Philips Air Fryer',
+        brand: 'Philips',
+        category: 'Small Appliances',
+        productImage: 'https://images.unsplash.com/photo-1621972750749-0fbb1abb7736?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 93,
+        discountPercent: 15,
+        distanceKm: 14,
+        originalPrice: 9999,
+        dealPrice: 8499,
+        durationMinutes: 15,
+        timeLeftSeconds: 900,
+        potentialBuyers: 9,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'Sony WH-1000XM4 Headphones',
+        brand: 'Sony',
+        category: 'Headphones',
+        productImage: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Grade A',
+        conditionScore: 90,
+        discountPercent: 20,
+        distanceKm: 6,
+        originalPrice: 22990,
+        dealPrice: 18392,
+        durationMinutes: 15,
+        timeLeftSeconds: 480,
+        potentialBuyers: 20,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      },
+      {
+        productName: 'OnePlus 11 5G',
+        brand: 'OnePlus',
+        category: 'Smartphones',
+        productImage: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80',
+        conditionGrade: 'Open Box',
+        conditionScore: 87,
+        discountPercent: 15,
+        distanceKm: 11,
+        originalPrice: 56999,
+        dealPrice: 48449,
+        durationMinutes: 15,
+        timeLeftSeconds: 840,
+        potentialBuyers: 16,
+        status: 'Active',
+        hubLocation: 'Delhi City Hub'
+      }
+    ]);
+
+    console.log('[Seeder] Hyperlocal Flash Deals seeded successfully.');
   } catch (error) {
     console.error('[Seeder] Error seeding database:', error);
   }
