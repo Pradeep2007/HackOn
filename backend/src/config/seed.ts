@@ -119,7 +119,7 @@ export const seedDatabase = async (): Promise<void> => {
       productName: 'iPhone 14 (128 GB) - Blue',
       brand: 'Apple',
       category: 'Electronics',
-      purchaseDate: new Date('2025-10-15'),
+      purchaseDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
       originalPurchasePrice: 69999,
       productImage: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=300&q=80',
       orderId: '403-1284931-8392183',
@@ -138,11 +138,14 @@ export const seedDatabase = async (): Promise<void> => {
       productName: 'MacBook Air M2 (8GB RAM, 256GB SSD) - Space Grey',
       brand: 'Apple',
       category: 'Electronics',
-      purchaseDate: new Date('2025-08-01'),
+      purchaseDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
       originalPurchasePrice: 99999,
       productImage: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=300&q=80',
       orderId: '403-9932194-0192842',
       deliveryStatus: 'Delivered',
+      returnStatus: 'Returned',
+      returnOption: 'hub',
+      returnCreditsEarned: 100,
       sustainabilityScore: 88,
       sustainabilityBadge: 'Gold',
       co2Savings: 145,
@@ -157,7 +160,7 @@ export const seedDatabase = async (): Promise<void> => {
       productName: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones - Black',
       brand: 'Sony',
       category: 'Electronics',
-      purchaseDate: new Date('2025-11-20'),
+      purchaseDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
       originalPurchasePrice: 29999,
       productImage: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80',
       orderId: '403-4921938-2281048',
@@ -176,7 +179,7 @@ export const seedDatabase = async (): Promise<void> => {
       productName: 'Green Soul Ergonomic Office Chair - Grey & Black',
       brand: 'Green Soul',
       category: 'Furniture',
-      purchaseDate: new Date('2025-05-12'),
+      purchaseDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000), // 40 days ago
       originalPurchasePrice: 8999,
       productImage: 'https://images.unsplash.com/photo-1580481072645-022f9a6dbf27?auto=format&fit=crop&w=300&q=80',
       orderId: '403-5592811-0192410',
@@ -311,6 +314,46 @@ export const seedDatabase = async (): Promise<void> => {
       sustainabilityScore: 84,
       sustainabilityBadge: 'Silver',
       co2Savings: 28
+    });
+
+    // Seed listing for John Seller's ergonomic chair
+    const reportSellerChair = await AIReport.create({
+      conditionCategory: 'Excellent',
+      conditionScore: 92,
+      confidenceScore: 90,
+      detectedIssues: [],
+      ownershipConfidence: 98,
+      functionalScore: 100,
+      functionalChecks: { structuralIntegrity: true, wheelsFunctional: true },
+      trustScore: 95,
+      productMatchScore: 100,
+      expectedAttributes: { brand: 'Green Soul', model: 'Ergonomic Chair', category: 'Furniture' },
+      detectedAttributes: { brand: 'Green Soul', model: 'Ergonomic Chair', category: 'Furniture' }
+    });
+
+    await Listing.create({
+      order: orderChair._id,
+      seller: seller._id,
+      sellingPrice: 5000,
+      description: 'Very comfortable ergonomic office chair, selling because I am relocating.',
+      conditionNotes: 'Like new condition, all mechanisms work perfectly.',
+      images: ['https://images.unsplash.com/photo-1580481072645-022f9a6dbf27?auto=format&fit=crop&w=300&q=80'],
+      aiReport: reportSellerChair._id,
+      isPurchasedOnAmazon: true,
+      isSellerVerified: true,
+      isAiVerified: true,
+      status: 'Active',
+      verificationCode: 'AMZ-2410',
+      zipCode: '110001',
+      ownershipConfidence: 98,
+      functionalScore: 100,
+      trustScore: 95,
+      productMatchScore: 100,
+      buyerPrice: 5500,
+      amazonFee: 500,
+      sustainabilityScore: 78,
+      sustainabilityBadge: 'Bronze',
+      co2Savings: 15
     });
 
     console.log('[Seeder] Pre-existing listings seeded successfully.');

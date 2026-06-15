@@ -24,6 +24,38 @@ interface Order {
   returnCreditsEarned?: number;
 }
 
+const getReturnWindowDays = (category: string): number => {
+  const cat = category.toLowerCase();
+  if (
+    cat.includes('electronics') ||
+    cat.includes('smartphone') ||
+    cat.includes('headphone') ||
+    cat.includes('echo') ||
+    cat.includes('kindle') ||
+    cat.includes('smartwatch') ||
+    cat.includes('tablet') ||
+    cat.includes('laptop') ||
+    cat.includes('appliances')
+  ) {
+    return 7;
+  }
+  if (
+    cat.includes('fashion') ||
+    cat.includes('apparel') ||
+    cat.includes('clothing') ||
+    cat.includes('shoes')
+  ) {
+    return 10;
+  }
+  return 30; // General Products
+};
+
+const getReturnExpiryDate = (purchaseDateStr: string, category: string): Date => {
+  const deliveryDate = new Date(purchaseDateStr);
+  const windowDays = getReturnWindowDays(category);
+  return new Date(deliveryDate.getTime() + windowDays * 24 * 60 * 60 * 1000);
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -351,7 +383,7 @@ export default function OrdersPage() {
                     {order.returnStatus === 'Returned' ? (
                       <div className="border-2 border-emerald-300 bg-emerald-50 rounded-md p-3.5 flex flex-col items-center space-y-1.5 shadow-sm">
                         <span className="text-[10px] text-emerald-850 font-black uppercase tracking-wider flex items-center gap-1">
-                          ✓ Item Returned
+                          ✓ Return Completed
                         </span>
                         <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-0.5 rounded border border-gray-200 capitalize">
                           {order.returnOption === 'hub' ? 'Community Hub Drop-off' : `${order.returnOption} Pickup`}
@@ -360,45 +392,64 @@ export default function OrdersPage() {
                           <Gift className="h-3.5 w-3.5" /> +{order.returnCreditsEarned} Credits Earned
                         </span>
                       </div>
-                    ) : (
-                      <>
-                        <button className="w-full bg-[#ffd814] hover:bg-[#f7ca00] text-black py-2 rounded-md shadow-sm font-semibold transition-colors duration-150 border border-[#fcd200]">
-                          Buy Again
-                        </button>
-                        <button className="w-full bg-white hover:bg-gray-50 text-gray-800 py-2 rounded-md shadow-sm border border-gray-300 font-medium transition-colors duration-150">
-                          Track Package
-                        </button>
-                        <button 
-                          onClick={() => handleStartAiEvaluation(order)}
-                          className="w-full bg-white hover:bg-gray-50 text-gray-800 py-2 rounded-md shadow-sm border border-gray-300 font-medium transition-colors duration-150"
-                        >
-                          Return Item
-                        </button>
-
-                        {/* Resell Feature Button */}
-                        {order.isAlreadyListed ? (
-                          <div className="border border-green-300 bg-green-50 rounded-md p-2 flex flex-col items-center">
-                            <span className="text-[10px] text-green-800 font-bold uppercase tracking-wider flex items-center gap-1">
-                              ✓ Listed for Resale
-                            </span>
-                            <Link 
-                              href={`/search?q=${encodeURIComponent(order.brand)}`}
-                              className="text-[11px] text-[#007185] hover:text-[#c45500] hover:underline font-bold mt-1"
-                            >
-                              View in Search Results
-                            </Link>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="w-full bg-gradient-to-b from-white to-gray-100 hover:from-gray-50 hover:to-gray-150 text-black py-2 rounded-md shadow-sm border-2 border-[#febd69] font-bold hover:border-[#f3a847] transition-all flex items-center justify-center gap-1"
-                          >
-                            <ShieldCheck className="h-4 w-4 text-[#007185]" />
-                            Sell This Item
+                    ) : (() => {
+                      const returnExpiryDate = getReturnExpiryDate(order.purchaseDate, order.category);
+                      const isReturnWindowActive = new Date() <= returnExpiryDate;
+                      return (
+                        <>
+                          <button className="w-full bg-[#ffd814] hover:bg-[#f7ca00] text-black py-2 rounded-md shadow-sm font-semibold transition-colors duration-150 border border-[#fcd200]">
+                            Buy Again
                           </button>
-                        )}
-                      </>
-                    )}
+                          <button className="w-full bg-white hover:bg-gray-50 text-gray-800 py-2 rounded-md shadow-sm border border-gray-300 font-medium transition-colors duration-150">
+                            Track Package
+                          </button>
+
+                          {isReturnWindowActive ? (
+                            <>
+                              <button 
+                                onClick={() => handleStartAiEvaluation(order)}
+                                className="w-full bg-white hover:bg-gray-50 text-gray-800 py-2 rounded-md shadow-sm border border-gray-300 font-medium transition-colors duration-150"
+                              >
+                                Return Item
+                              </button>
+                              <span className="text-[11px] text-emerald-700 font-bold mt-1 block">
+                                Return Eligible Until: {returnExpiryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {order.isAlreadyListed ? (
+                                <div className="border border-green-300 bg-green-50 rounded-md p-2 flex flex-col items-center">
+                                  <span className="text-[10px] text-green-800 font-bold uppercase tracking-wider flex items-center gap-1">
+                                    ✓ Resale Listing Active
+                                  </span>
+                                  <Link 
+                                    href={`/search?q=${encodeURIComponent(order.brand)}`}
+                                    className="w-full bg-white hover:bg-gray-50 text-gray-800 text-center py-1.5 rounded border border-gray-300 font-semibold transition-all mt-1.5"
+                                  >
+                                    View Listing
+                                  </Link>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setSelectedOrder(order)}
+                                  className="w-full bg-gradient-to-b from-white to-gray-100 hover:from-gray-50 hover:to-gray-150 text-black py-2 rounded-md shadow-sm border-2 border-[#febd69] font-bold hover:border-[#f3a847] transition-all flex items-center justify-center gap-1"
+                                >
+                                  <ShieldCheck className="h-4 w-4 text-[#007185]" />
+                                  Sell This Item
+                                </button>
+                              )}
+                              <div className="text-[11px] text-gray-500 font-bold mt-1 space-y-0.5">
+                                <div>Return Window Expired</div>
+                                {!order.isAlreadyListed && (
+                                  <div className="text-emerald-700 font-extrabold text-[10px] uppercase tracking-wider">Eligible For Resale</div>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                 </div>

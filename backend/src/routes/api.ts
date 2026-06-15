@@ -26,6 +26,38 @@ const getVerificationCode = (orderId: string): string => {
   return `AMZ-${digits.substring(digits.length - 4)}`;
 };
 
+// Return window eligibility calculator
+export const getReturnWindowDays = (category: string): number => {
+  const cat = category.toLowerCase();
+  if (
+    cat.includes('electronics') ||
+    cat.includes('smartphone') ||
+    cat.includes('headphone') ||
+    cat.includes('echo') ||
+    cat.includes('kindle') ||
+    cat.includes('smartwatch') ||
+    cat.includes('tablet') ||
+    cat.includes('laptop') ||
+    cat.includes('appliances')
+  ) {
+    return 7;
+  }
+  if (
+    cat.includes('fashion') ||
+    cat.includes('apparel') ||
+    cat.includes('clothing') ||
+    cat.includes('shoes')
+  ) {
+    return 10;
+  }
+  return 30; // General Products
+};
+
+export const getReturnExpiryDate = (purchaseDate: Date, category: string): Date => {
+  const windowDays = getReturnWindowDays(category);
+  return new Date(purchaseDate.getTime() + windowDays * 24 * 60 * 60 * 1000);
+};
+
 // Proximity local delivery calculator
 const calculateProximity = (sellerZip: string, buyerZip: string = '110001') => {
   const sz = sellerZip.trim();
@@ -470,6 +502,13 @@ router.post('/listings', upload.array('images', 5), async (req: Request, res: Re
     if (order.deliveryStatus !== 'Delivered') {
       return res.status(400).json({ error: 'Order not delivered.' });
     }
+    if (order.returnStatus === 'Returned') {
+      return res.status(400).json({ error: 'Product was returned.' });
+    }
+    const returnExpiryDate = getReturnExpiryDate(order.purchaseDate, order.category);
+    if (new Date() <= returnExpiryDate) {
+      return res.status(400).json({ error: 'Cannot resell while the product is still within its return window.' });
+    }
     const existingListing = await Listing.findOne({ order: order._id });
     if (existingListing) {
       return res.status(400).json({ error: 'Listing already active.' });
@@ -833,6 +872,14 @@ router.post('/orders/:id/return', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Order not found.' });
     }
 
+    if (order.returnStatus === 'Returned') {
+      return res.status(400).json({ error: 'Product already returned.' });
+    }
+    const returnExpiryDate = getReturnExpiryDate(order.purchaseDate, order.category);
+    if (new Date() > returnExpiryDate) {
+      return res.status(400).json({ error: 'Return window has expired.' });
+    }
+
     const user = await getActiveUser();
     if (!user) {
       return res.status(404).json({ error: 'User not logged in.' });
@@ -977,6 +1024,14 @@ router.post('/orders/:id/evaluate-return', upload.single('video'), async (req: R
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    if (order.returnStatus === 'Returned') {
+      return res.status(400).json({ error: 'Product already returned.' });
+    }
+    const returnExpiryDate = getReturnExpiryDate(order.purchaseDate, order.category);
+    if (new Date() > returnExpiryDate) {
+      return res.status(400).json({ error: 'Return window has expired.' });
     }
 
     const { simulateMismatch, conditionScore: overrideScore } = req.body;
