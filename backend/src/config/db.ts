@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import path from 'path';
+import fs from 'fs';
 
 let mongoServer: MongoMemoryServer | null = null;
 
@@ -12,8 +14,18 @@ export const connectDB = async (): Promise<string> => {
       await mongoose.connect(mongoUri);
     } else {
       console.log('[Database] MONGODB_URI not found. Spinning up In-Memory MongoDB server (will download MongoDB binary if not cached)...');
+      
+      const dbDir = path.join(process.cwd(), 'tmp/mongodb-data');
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
       // Spin up an in-memory MongoDB server
       mongoServer = await MongoMemoryServer.create({
+        instance: {
+          dbPath: dbDir,
+          storageEngine: 'ephemeralForTest',
+        },
         binary: {
           version: '7.0.12'
         }

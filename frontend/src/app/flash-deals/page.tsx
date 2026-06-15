@@ -151,7 +151,7 @@ export default function FlashDealsDashboard() {
               <span className="text-gray-800">Flash Deals</span>
             </div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              ⚡ Hyperlocal Flash Deal Engine <span className="bg-[#002f6c] text-[#febd69] text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">Circular Loop</span>
+              ⚡ Flash Deal's <span className="bg-[#002f6c] text-[#febd69] text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">Hurry Noww!!!</span>
             </h1>
             <p className="text-xs text-gray-650 mt-1 max-w-xl">
               Amazon Return Recovery Hub. High-quality electronics returns (Condition Score &gt; 75) are immediately routed to local city hubs and matched with nearby demand to prevent redundant warehouse transit.

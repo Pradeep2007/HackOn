@@ -1485,7 +1485,7 @@ router.get('/sustainability/leaderboard', async (req: Request, res: Response) =>
 });
 
 // ==========================================
-// HYPERLOCAL FLASH DEAL ENGINE ENDPOINTS
+// Flash Deal's ENDPOINTS
 // ==========================================
 
 // GET /api/flash-deals - Get all hyperlocal flash deals
