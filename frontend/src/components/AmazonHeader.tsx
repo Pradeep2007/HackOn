@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ShoppingCart, MapPin, Menu, ChevronDown } from 'lucide-react';
 import { API_URL } from '@/config';
 
-export default function AmazonHeader() {
+function AmazonHeaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,5 +132,33 @@ export default function AmazonHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+export default function AmazonHeader() {
+  return (
+    <Suspense fallback={
+      <header className="w-full text-white font-sans text-sm select-none">
+        <div className="bg-[#131921] px-4 py-2 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1 border border-transparent hover:border-white p-1 rounded-sm cursor-pointer">
+            <div className="flex flex-col items-start leading-none pt-1">
+              <span className="text-xl font-black tracking-tight text-white flex items-center">
+                amazon<span className="text-[#febd69] font-medium text-xs pt-1">.in</span>
+              </span>
+              <span className="text-[10px] text-[#febd69] font-semibold -mt-1 ml-5">resell</span>
+            </div>
+          </div>
+          <div className="flex-grow max-w-2xl h-10 rounded-md bg-white border border-gray-300"></div>
+          <div className="flex items-center gap-3 w-40"></div>
+        </div>
+        <div className="bg-[#232f3e] px-4 py-1.5 flex items-center justify-between text-xs">
+          <div className="flex gap-4">
+            <span className="font-bold">All</span>
+          </div>
+        </div>
+      </header>
+    }>
+      <AmazonHeaderContent />
+    </Suspense>
   );
 }
